@@ -1,0 +1,15 @@
+<h1>Admin Dashboard</h1>
+
+<h2>Profiles</h2>
+
+<ul>
+    {{ range .profiles }}
+        <li>
+            {{ .ProfileID }} - {{ .FullName }} ({{ .Email }})
+            <a href="/ganjimain99/edit/{{.ProfileID}}">Edit</a> 
+            <a href="/ganjimain99/delete/{{.ProfileID}}">Delete</a>
+        </li>
+     {{ end }}
+</ul>
+
+<a href="/ganjimain99/create">Create New Profile</a> 

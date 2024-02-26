@@ -1,0 +1,15 @@
+[redis]
+host = "localhost"   
+port = 6379          
+password = ""
+
+[passwords]
+personal_info = ""
+golang = "qwerty"
+sap = "somepassword"
+ba = "yetanotherpassword"
+admin = "qwerty123499"
+
+[email]
+address = "ysumanth991995@gmail.com"
+password = "your_email_password"
