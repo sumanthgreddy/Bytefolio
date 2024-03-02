@@ -10,10 +10,10 @@ import (
 )
 
 // Bach Profile Handler
-func bachProfileHandler(log *logrus.Logger, session *gocql.Session) gin.HandlerFunc { 
+func BachProfileHandler(log *logrus.Logger, session *gocql.Session) gin.HandlerFunc { 
     return func(c *gin.Context) {
         // 1. Authentication 
-        userID, err := middleware.authenticateUser(c) 
+        userID, err := middleware.AuthenticateUser(c, rdb) 
         if err != nil {
             log.Errorf("Error authenticating user: %v", err)
             c.HTML(http.StatusUnauthorized, "error.tmpl", gin.H{"error": "Unauthorized"})

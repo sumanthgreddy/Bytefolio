@@ -9,6 +9,9 @@ import (
     "github.com/gocql/gocql"
     "github.com/sirupsen/logrus"
 	"PersonalWebsite/backend/database"
+    "golang.org/x/crypto/bcrypt"
+
+    "PersonalWebsite/backend/utils"
     "PersonalWebsite/backend/middleware" // Adjust the path if necessary
 )
 
@@ -29,9 +32,9 @@ type WorkExperience struct {
 }
 
 
-func adminProfileHandler(log *logrus.Logger, session *gocql.Session) gin.HandlerFunc {
+func AdminProfileHandler(log *logrus.Logger, session *gocql.Session) gin.HandlerFunc {
     return func(c *gin.Context) {
-        profiles, err := database.fetchAllProfiles(session)
+        profiles, err := database.FetchAllProfiles(session)
         if err != nil {
             log.Errorf("Error fetching profiles: %v", err)
             c.HTML(http.StatusInternalServerError, "error.tmpl", gin.H{"error": "Error fetching profiles. Please try again."})
@@ -43,7 +46,7 @@ func adminProfileHandler(log *logrus.Logger, session *gocql.Session) gin.Handler
 }
 
 
-func adminLoginHandler(log *logrus.Logger, session *gocql.Session) gin.HandlerFunc {
+func AdminLoginHandler(log *logrus.Logger, session *gocql.Session) gin.HandlerFunc {
     return func(c *gin.Context) {
         // 1. Render admin login form 
         c.HTML(http.StatusOK, "admin_login.tmpl", nil)
@@ -54,7 +57,7 @@ func adminLoginHandler(log *logrus.Logger, session *gocql.Session) gin.HandlerFu
             password := c.PostForm("password") 
 
             // Validate email/password 
-            if isValidAdmin(log, session, email, password) {  
+            if IsValidAdmin(log, session, email, password) {  
                 c.Set("isAdmin", true)  
                 c.Redirect(http.StatusFound, "/ganjimain99") 
             } else {
@@ -67,7 +70,7 @@ func adminLoginHandler(log *logrus.Logger, session *gocql.Session) gin.HandlerFu
 
 // Functions to perform CRUD operations (Placeholders)
 
-func updateProfile(session *gocql.Session, profile Profile) error {
+func UpdateProfile(session *gocql.Session, profile Profile) error {
     err := session.Query("UPDATE website.profiles SET full_name = ?, email = ?, phone_number = ? WHERE profile = ?", 
         profile.FullName, profile.Email, profile.PhoneNumber, profile.ProfileID).Exec()
     if err != nil {
@@ -76,7 +79,8 @@ func updateProfile(session *gocql.Session, profile Profile) error {
     return nil 
 }
 
-func createProfile(session *gocql.Session, profile Profile) error {
+func CreateProfile(log *logrus.Logger, session *gocql.Session) gin.HandlerFunc {
+    return func(c *gin.Context){
     profile.ProfileID = uuid.New().String()
     err := session.Query("INSERT INTO website.profiles (profile, full_name, email, phone_number) VALUES (?, ?, ?, ?)",
         profile.ProfileID, profile.FullName, profile.Email, profile.PhoneNumber).Exec()
@@ -85,8 +89,9 @@ func createProfile(session *gocql.Session, profile Profile) error {
     }
     return nil 
 }
+}
 
-func deleteProfile(session *gocql.Session, profileID string) error {
+func DeleteProfile(log *logrus.Logger, session *gocql.Session) gin.HandlerFunc {
     err := session.Query("DELETE FROM website.profiles WHERE profile = ?", profileID).Exec()
     if err != nil {
         return fmt.Errorf("error deleting profile: %v", err)
@@ -94,7 +99,7 @@ func deleteProfile(session *gocql.Session, profileID string) error {
     return nil
 }
 
-func isValidAdmin(log *logrus.Logger, session *gocql.Session, email, password string) bool {
+func IsValidAdmin(log *logrus.Logger, session *gocql.Session, email, password string) bool {
     // 1. Fetch admin credentials from database 
     var storedEmail, storedPasswordHash string
     err := session.Query("SELECT email, password_hash FROM admins WHERE email = ?", email).Consistency(gocql.One).Scan(&storedEmail, &storedPasswordHash)
@@ -111,7 +116,7 @@ func isValidAdmin(log *logrus.Logger, session *gocql.Session, email, password st
 
     // 3. Advanced Authentication (Example: Email Verification)
     // a) Generate and store a random verification code
-    verificationCode := generateRandomCode() // You'll need a function for this
+    verificationCode := utils.GenerateRandomCode() // You'll need a function for this
     err = session.Query("UPDATE admins SET verification_code = ? WHERE email = ?", verificationCode, email).Exec()
     if err != nil {
         log.Errorf("Error storing verification code: %v", err)
@@ -119,21 +124,21 @@ func isValidAdmin(log *logrus.Logger, session *gocql.Session, email, password st
     }
 
     // b) Send the code to the admin's email (Implementation not shown here)
-    err = sendVerificationEmail(email, verificationCode)
+    err = utils.SendVerificationEmail(email, verificationCode)
     if err != nil {
         log.Errorf("Error sending verification email: %v", err)
         return false
     }
 
  // 3. Advanced Authentication 
-    verificationCode := generateRandomCode() 
+    verificationCode = utils.GenerateRandomCode() 
     err = session.Query("UPDATE admins SET verification_code = ? WHERE email = ?", verificationCode, email).Exec()
     if err != nil {
         log.Errorf("Error in generating Random code: %v", err)
 		return false
     }
 
-    err = sendVerificationEmail(email, verificationCode)
+    err = utils.SendVerificationEmail(email, verificationCode)
     if err != nil {
         log.Errorf("Error is sending Verfication email: %v", err)
     }
@@ -143,37 +148,7 @@ func isValidAdmin(log *logrus.Logger, session *gocql.Session, email, password st
 
 
 
-func generateRandomCode() string {
-    rand.Seed(time.Now().UnixNano())
-    chars := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890")
-    length := 8 
-    var b strings.Builder
-    for i := 0; i < length; i++ {
-        b.WriteRune(chars[rand.Intn(len(chars))])
-    }
-    return b.String() 
-}
-
-
-func sendVerificationEmail(email, code string) error {
-    from := config.Email.Address
-    password := config.Email.Password
-    to := []string{email}
-    smtpHost := "smtp.gmail.com"
-    smtpPort := "587"
-
-    message := []byte(fmt.Sprintf("Your verification code is: %s", code))
-
-    auth := smtp.PlainAuth("", from, password, smtpHost)
-    err := smtp.SendMail(smtpHost+":"+smtpPort, auth, from, to, message)
-    if err != nil {
-        return err
-    }
-    return nil 
-}
-
-
-func adminCodeVerificationHandler(log *logrus.Logger, session *gocql.Session) gin.HandlerFunc {
+func AdminCodeVerificationHandler(log *logrus.Logger, session *gocql.Session) gin.HandlerFunc {
     return func(c *gin.Context) {
         if c.Request.Method == "POST" {
             email := c.PostForm("email")

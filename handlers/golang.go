@@ -10,10 +10,10 @@ import (
 )
 
 // Golang Profile Handler
-func golangProfileHandler(log *logrus.Logger, session *gocql.Session) gin.HandlerFunc { 
+func GolangProfileHandler(log *logrus.Logger, session *gocql.Session) gin.HandlerFunc { 
     return func(c *gin.Context) {
         // 1. Authentication 
-        userID, err := middleware.authenticateUser(c) 
+        userID, err := middleware.AuthenticateUser(c) 
         if err != nil {
             log.Errorf("Error authenticating user: %v", err)
             c.HTML(http.StatusUnauthorized, "error.tmpl", gin.H{"error": "Unauthorized"})

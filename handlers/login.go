@@ -15,14 +15,14 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 	
 )
 
 // loginHandler handles password submission and redirects if valid
-func loginHandler(log *logrus.Logger, rdb *redis.Client) gin.HandlerFunc {
+func LoginHandler(log *logrus.Logger, rdb *redis.Client) gin.HandlerFunc {
     return func(c *gin.Context) {
 		password := c.Request.FormValue("password") // Assuming password is in a form
 
